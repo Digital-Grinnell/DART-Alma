@@ -1,11 +1,18 @@
 # DART Architecture & Key Design Decisions
 
+<!-- [CB-SPECIFIC] START: The entire compound object architecture below is CollectionBuilder-specific.
+     In an Alma Digital / Specto environment, compound/multi-part objects use different fields
+     and relationships. Replace objectid → MMS ID, parentid → Alma relationship field,
+     display_template → Alma resource type, object_location → Alma Digital file URL,
+     image_small/image_thumb → Alma derivative URLs. The underscore-prefix filename convention
+     is also CB-specific and would need to be redesigned for Alma. -->
+
 ## Compound Object Filename Indexing
 
 ### The Problem
 In DART's workflow, original filenames serve as the "source of truth" for indexing digital objects. However, compound objects (parents that group related files) don't have actual files associated with them - they're logical containers. This created a challenge:
 - Individual files have filenames: `photo_001.jpg`, `photo_002.jpg`
-- Compound parents had no filename: just an objectid like `dg_1715614220`
+- Compound parents had no filename: just an objectid like `dg_1715614220` <!-- [CB-SPECIFIC] objectid field -->
 - This required a 2-pronged indexing approach with fallback logic
 
 ### The Solution: Underscore-Prefixed First Child Filename
@@ -19,12 +26,14 @@ In DART's workflow, original filenames serve as the "source of truth" for indexi
 4. This differentiates the parent index from the actual child file
 
 **Example**:
+<!-- [CB-SPECIFIC] The CSV example below uses CB-specific field names -->
 ```csv
 objectid,filename,parentid,display_template
 dg_1715614220,_photo_001.jpg,,compound_object     ← Compound parent (underscore prefix)
 dg_1715614221,photo_001.jpg,dg_1715614220,image  ← First child (original filename)
 dg_1715614222,photo_002.jpg,dg_1715614220,image  ← Second child
 ```
+<!-- [CB-SPECIFIC] END -->
 
 ### Benefits
 
@@ -54,16 +63,16 @@ dg_1715614222,photo_002.jpg,dg_1715614220,image  ← Second child
 
 **In CSV Export (Function 2)**:
 - Write compound parent's filename as `_<first_child_filename>`
-- Maintains all other compound parent fields (objectid, display_template, etc.)
+- Maintains all other compound parent fields (objectid, display_template, etc.) <!-- [CB-SPECIFIC] -->
 - First child and all other children write their original filenames
-- Compound parents do NOT receive `object_location` values (no physical file)
+- Compound parents do NOT receive `object_location` values (no physical file) <!-- [CB-SPECIFIC] -->
 
 **In Derivative Generation (Function 3)**:
 - Skip compound parents during derivative generation (no physical file to process)
 - After all children are processed, populate compound parent derivatives:
   - Remove underscore from compound parent filename
   - Find matching child row by filename
-  - Copy `image_small` and `image_thumb` URLs from child to parent
+  - Copy `image_small` and `image_thumb` URLs from child to parent <!-- [CB-SPECIFIC] -->
 - This avoids duplicate uploads - derivatives already exist in Azure for first child
 - Compound parents reference the same derivative URLs as their first child
 - Log messages show which compound parents received derivative URLs
@@ -74,7 +83,9 @@ This approach eliminates complexity while maintaining data integrity:
 - **Before**: If `filename` is blank, fall back to `objectid` for indexing
 - **After**: Always use `filename` - underscore prefix indicates special case
 - Simpler code, fewer conditionals, more maintainable
-- Works seamlessly with existing CollectionBuilder compatibility
+- Works seamlessly with existing CollectionBuilder compatibility <!-- [CB-SPECIFIC] -->
+
+<!-- [CB-SPECIFIC] END: Entire compound object architecture section above is CB-specific -->
 
 ### Date Implemented
 May 15, 2026

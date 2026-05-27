@@ -5,16 +5,16 @@ Generate small and thumbnail derivative images from your original files and uplo
 
 ## When to Use
 Use this function after Function 2 (Export Assets to CSV and Azure) when you want to:
-- Create web-optimized derivative images for CollectionBuilder
+- Create web-optimized derivative images for CollectionBuilder <!-- [CB-SPECIFIC] -->
 - Generate small images (max 800x800px) for detail pages
 - Generate thumbnail images (max 400x400px) for browse/grid views
-- Upload derivatives to Azure cloud storage
-- Automatically populate `image_small` and `image_thumb` URL columns in your CSV
+- Upload derivatives to Azure cloud storage <!-- [CB-SPECIFIC] -->
+- Automatically populate `image_small` and `image_thumb` URL columns in your CSV <!-- [CB-SPECIFIC] -->
 
 ## Requirements
 - **Working/Outputs folder** must be set
-- **Azure Blob Storage** must be configured in Function 0 settings
-  - Valid `azure_blob_storage_path` (contains `/objs/` folder)
+- **Azure Blob Storage** must be configured in Function 0 settings <!-- [CB-SPECIFIC] Azure is CB-specific; Alma/Specto uses different storage -->
+  - Valid `azure_blob_storage_path` (contains `/objs/` folder) <!-- [CB-SPECIFIC] /objs/ container name is CB-specific -->
   - Valid `azure_connection_string`
 - **CSV export from Function 2** must exist in working directory
 - **Original source files** must be accessible (image files only)
@@ -32,31 +32,31 @@ Use this function after Function 2 (Export Assets to CSV and Azure) when you wan
 5. DART processes each image file:
    - Generates small derivative (800x800px max, maintains aspect ratio)
    - Generates thumbnail derivative (400x400px max, maintains aspect ratio)
-   - Uploads small to `/smalls/` Azure folder with `_SMALL` suffix
-   - Uploads thumbnail to `/thumbs/` Azure folder with `_TN` suffix
-   - Populates `image_small` and `image_thumb` columns with Azure URLs
+   - Uploads small to `/smalls/` Azure folder with `_SMALL` suffix <!-- [CB-SPECIFIC] _SMALL suffix and /smalls/ container are CB-specific -->
+   - Uploads thumbnail to `/thumbs/` Azure folder with `_TN` suffix <!-- [CB-SPECIFIC] _TN suffix and /thumbs/ container are CB-specific -->
+   - Populates `image_small` and `image_thumb` columns with Azure URLs <!-- [CB-SPECIFIC] -->
 
 6. A new timestamped CSV is created with the added columns
 
 ## What Gets Generated
 
 ### Small Derivatives
-- **Purpose**: Detail page images in CollectionBuilder
-- **Filename**: `dg_<epoch>_SMALL.jpg`
+- **Purpose**: Detail page images in CollectionBuilder <!-- [CB-SPECIFIC] -->
+- **Filename**: `dg_<epoch>_SMALL.jpg` <!-- [CB-SPECIFIC] _SMALL suffix is CB-specific -->
 - **Size**: Maximum 800x800 pixels (maintains aspect ratio)
 - **Quality**: 85% JPEG compression
-- **Location**: `/smalls/` folder in Azure (parallel to `/objs/`)
-- **CSV Column**: `image_small`
-- **URL Format**: `https://account.blob.core.windows.net/container/smalls/path/dg_1234567890_SMALL.jpg`
+- **Location**: `/smalls/` folder in Azure (parallel to `/objs/`) <!-- [CB-SPECIFIC] -->
+- **CSV Column**: `image_small` <!-- [CB-SPECIFIC] -->
+- **URL Format**: `https://account.blob.core.windows.net/container/smalls/path/dg_1234567890_SMALL.jpg` <!-- [CB-SPECIFIC] -->
 
 ### Thumbnail Derivatives
-- **Purpose**: Browse grid and list view images in CollectionBuilder
-- **Filename**: `dg_<epoch>_TN.jpg`
+- **Purpose**: Browse grid and list view images in CollectionBuilder <!-- [CB-SPECIFIC] -->
+- **Filename**: `dg_<epoch>_TN.jpg` <!-- [CB-SPECIFIC] _TN suffix is CB-specific -->
 - **Size**: Maximum 400x400 pixels (maintains aspect ratio)
 - **Quality**: 85% JPEG compression
-- **Location**: `/thumbs/` folder in Azure (parallel to `/objs/`)
-- **CSV Column**: `image_thumb`
-- **URL Format**: `https://account.blob.core.windows.net/container/thumbs/path/dg_1234567890_TN.jpg`
+- **Location**: `/thumbs/` folder in Azure (parallel to `/objs/`) <!-- [CB-SPECIFIC] -->
+- **CSV Column**: `image_thumb` <!-- [CB-SPECIFIC] -->
+- **URL Format**: `https://account.blob.core.windows.net/container/thumbs/path/dg_1234567890_TN.jpg` <!-- [CB-SPECIFIC] -->
 
 ## Supported File Formats
 
@@ -123,10 +123,11 @@ Examples:
 3. **URL inheritance logic**: 
    - Compound parent filename: `_photo_001.jpg`
    - First child filename: `photo_001.jpg` (underscore removed)
-   - DART finds the child row and copies its `image_small` and `image_thumb` values to the parent
+   - DART finds the child row and copies its `image_small` and `image_thumb` values to the parent <!-- [CB-SPECIFIC] -->
 4. **Derivatives already exist**: The first child's derivatives were already generated and uploaded to Azure, so the parent simply references the same URLs
 5. **No duplicate uploads**: This approach avoids uploading duplicate files to Azure while ensuring compound parents have proper derivative references
 
+<!-- [CB-SPECIFIC] START: compound parent derivative example uses CB-specific fields -->
 **Example**:
 ```csv
 objectid,filename,parentid,image_small,image_thumb
@@ -134,6 +135,7 @@ dg_1234,_photo_001.jpg,,https://.../smalls/.../dg_1235_SMALL.jpg,https://.../thu
 dg_1235,photo_001.jpg,dg_1234,https://.../smalls/.../dg_1235_SMALL.jpg,https://.../thumbs/.../dg_1235_TN.jpg
 dg_1236,photo_002.jpg,dg_1234,https://.../smalls/.../dg_1236_SMALL.jpg,https://.../thumbs/.../dg_1236_TN.jpg
 ```
+<!-- [CB-SPECIFIC] END -->
 
 The compound parent (dg_1234) shares the same derivative URLs as its first child (dg_1235), eliminating redundant storage.
 
@@ -190,7 +192,7 @@ Function 3 intelligently checks Azure before generating new derivatives:
    - Saves processing time on large collections
 
 3. **Builds URLs from existing files**
-   - Populates `image_small` and `image_thumb` columns from existing Azure files
+   - Populates `image_small` and `image_thumb` columns from existing Azure files <!-- [CB-SPECIFIC] -->
    - Includes skipped files in success counts
    - Logs skipped files as "⏩ Derivatives already exist in Azure - skipping"
 
@@ -214,8 +216,8 @@ Function 3 intelligently checks Azure before generating new derivatives:
 **Location**: Your working/outputs folder
 
 **Added Columns**:
-- `image_small` - Azure URL for small derivative
-- `image_thumb` - Azure URL for thumbnail derivative
+- `image_small` - Azure URL for small derivative <!-- [CB-SPECIFIC] -->
+- `image_thumb` - Azure URL for thumbnail derivative <!-- [CB-SPECIFIC] -->
 
 ### Results Dialog
 
@@ -239,6 +241,7 @@ The log file is also saved to `logfiles/` in your working directory for later re
 
 ## Example Updated CSV
 
+<!-- [CB-SPECIFIC] START: Example CSV uses CB-specific field names -->
 **Before Function 3** (output from Function 2):
 ```csv
 objectid,filename,title,display_template,object_location
@@ -252,6 +255,7 @@ objectid,filename,title,display_template,object_location,image_small,image_thumb
 dg_1715614222,photo_001.jpg,,image,https://account.blob.core.windows.net/objs/collection/dg_1715614222.jpg,https://account.blob.core.windows.net/smalls/collection/dg_1715614222_SMALL.jpg,https://account.blob.core.windows.net/thumbs/collection/dg_1715614222_TN.jpg
 dg_1715614223,photo_002.jpg,,image,https://account.blob.core.windows.net/objs/collection/dg_1715614223.jpg,https://account.blob.core.windows.net/smalls/collection/dg_1715614223_SMALL.jpg,https://account.blob.core.windows.net/thumbs/collection/dg_1715614223_TN.jpg
 ```
+<!-- [CB-SPECIFIC] END -->
 
 ## Kill Switch - Emergency Stop
 
@@ -279,7 +283,7 @@ The kill switch is useful when:
 
 ### What Gets Processed
 - ✓ Image files with valid extensions (jpg, png, gif, tif, bmp, webp)
-- ✓ Rows with both objectid and filename populated
+- ✓ Rows with both objectid and filename populated <!-- [CB-SPECIFIC] objectid field -->
 - ✓ Files where source can be located
 - ✓ Compound parent objects (automatically inherit first child's derivative URLs)
 
@@ -317,7 +321,7 @@ The kill switch is useful when:
 If Function 3 fails or is stopped mid-process:
 - Derivatives successfully generated before the failure are preserved in Azure
 - The updated CSV contains URLs for completed derivatives only
-- Failed items have empty image_small and image_thumb columns
+- Failed items have empty image_small and image_thumb columns <!-- [CB-SPECIFIC] -->
 - You can re-run Function 3 to process remaining items (already-uploaded derivatives may be overwritten)
 
 ## Performance Notes
@@ -341,13 +345,16 @@ If Function 3 fails or is stopped mid-process:
 - Keep original source files accessible during processing
 - Check log files for detailed error information if issues occur
 
-## CollectionBuilder Integration
+## CollectionBuilder Integration <!-- [CB-SPECIFIC] -->
 
-The `image_small` and `image_thumb` columns are recognized by CollectionBuilder:
-- **image_small**: Used on item detail pages
-- **image_thumb**: Used in browse grids and card layouts
+<!-- [CB-SPECIFIC] START: image_small and image_thumb are CB-specific column names.
+     In Alma/Specto, replace with the appropriate derivative URL field names. -->
+The `image_small` and `image_thumb` columns are recognized by CollectionBuilder: <!-- [CB-SPECIFIC] -->
+- **image_small**: Used on item detail pages <!-- [CB-SPECIFIC] -->
+- **image_thumb**: Used in browse grids and card layouts <!-- [CB-SPECIFIC] -->
 - Derivatives provide faster page loads and better user experience
-- Original files (`object_location`) can still be downloaded by users
+- Original files (`object_location`) can still be downloaded by users <!-- [CB-SPECIFIC] object_location is a CB field -->
+<!-- [CB-SPECIFIC] END -->
 
 ## Notes
 

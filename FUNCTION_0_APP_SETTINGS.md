@@ -62,12 +62,12 @@ For `auto_save_enabled`, `group_compound_objects`, and `use_working_folder_for_f
 
 ### CSV Structure File Validation
 
-The `csv_structure_file` setting allows you to specify a template CSV file that defines the required column structure for CollectionBuilder-compatible metadata exports. 
+The `csv_structure_file` setting allows you to specify a template CSV file that defines the required column structure for CollectionBuilder-compatible metadata exports. <!-- [CB-SPECIFIC] -->
 
 **Auto-Copy to Working Directory:** When you select a CSV template file and save settings, DART automatically copies it to your working directory if it's not already there. This keeps all project-related files together and ensures the template is available with your project data.
 
 **Required Fields:**
-- `objectid` - Unique identifier for each object (automatically generated as `dg_<epoch>`)
+- `objectid` - Unique identifier for each object (automatically generated as `dg_<epoch>`) <!-- [CB-SPECIFIC] -->
 - `filename` - Original filename of the digital asset
 
 **Recommended Fields:**
@@ -85,12 +85,14 @@ The `csv_structure_file` setting allows you to specify a template CSV file that 
 7. Red error (✗) indicates missing required fields
 8. On app startup, DART validates the configured CSV structure and logs the result
 
+<!-- [CB-SPECIFIC] START: Example template uses CB-specific field names -->
 **Example template CSV:**
 ```csv
 objectid,filename,title,format,date,description,subject,creator
 ```
+<!-- [CB-SPECIFIC] END -->
 
-This ensures your metadata exports will be compatible with CollectionBuilder and other digital collection platforms that require specific column structures.
+This ensures your metadata exports will be compatible with CollectionBuilder and other digital collection platforms that require specific column structures. <!-- [CB-SPECIFIC] -->
 
 ### Core Metadata CSV
 
@@ -118,7 +120,7 @@ The `core_metadata_csv` setting (optional) identifies your main/controlling meta
 
 **Validation checks:**
 - File exists and is readable
-- Has required CollectionBuilder fields (`objectid`, `filename`)
+- Has required CollectionBuilder fields (`objectid`, `filename`) <!-- [CB-SPECIFIC] -->
 - If CSV structure template is configured: verifies core CSV has all template columns
 - Reports column count and compatibility status
 
@@ -215,7 +217,7 @@ DART will validate that `/objs/` is in the path and expect `/smalls/` and `/thum
 Once configured, future DART functions will be able to:
 - Upload processed files to Azure Blob Storage
 - Maintain file organization in the cloud
-- Generate public URLs for CollectionBuilder
+- Generate public URLs for CollectionBuilder <!-- [CB-SPECIFIC] -->
 - Sync local working files with cloud storage
 
 ## Example Settings File (stored encrypted)

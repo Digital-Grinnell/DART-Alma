@@ -1,5 +1,11 @@
 # DART Changelog
 
+<!-- [CB-SPECIFIC] NOTE: Many entries in this changelog describe CollectionBuilder-specific features.
+     Key CB-specific items include: objectid, parentid, display_template, object_location,
+     image_small, image_thumb, compound_object template value, /objs/ /smalls/ /thumbs/ Azure containers,
+     and the underscore-prefix compound parent filename convention.
+     When creating an Alma/Specto equivalent, these features will need to be redesigned. -->
+
 All notable changes to the DART (Digital Asset Routing and Transformation) project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
