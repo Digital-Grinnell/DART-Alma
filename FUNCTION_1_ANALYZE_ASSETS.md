@@ -34,7 +34,7 @@ Use this function to:
    - Groups files by text similarity in filenames
    - Numbers are used for sequencing, not grouping
    - Each compound gets its own `dg_<epoch>` identifier
-   - Child files track their parent via `parentid` field
+   - Child files track their parent via `parentid` field <!-- [CB-SPECIFIC] -->
 
 ## Compound Object Grouping
 
@@ -105,24 +105,25 @@ When `group_compound_objects` is enabled in Function 0:
    - A compound object is created with its own `dg_<epoch>` identifier
    - The compound is associated with the **folder path** containing the children
    - Compound ID is reused if the same group (folder + text base) is processed again
-   - The compound ID becomes the `parentid` for all children
+   - The compound ID becomes the `parentid` for all children <!-- [CB-SPECIFIC] -->
 
 6. **Child Tracking**: Each child asset:
-   - Has its own unique `dg_<epoch>` identifier (objectid)
-   - Has a `parentid` field pointing to the compound object
+   - Has its own unique `dg_<epoch>` identifier (objectid) <!-- [CB-SPECIFIC] objectid field -->
+   - Has a `parentid` field pointing to the compound object <!-- [CB-SPECIFIC] -->
    - Retains its file path and other metadata
 
 7. **Standalone Objects**: Files that don't match any group:
    - Prefix less than 3 characters (too short for matching)
    - Only file with that prefix (no group formed)
-   - Have `parentid = None`
+   - Have `parentid = None` <!-- [CB-SPECIFIC] -->
    - Are displayed as standalone objects
 
+<!-- [CB-SPECIFIC] START: Data structure uses CB-specific field names -->
 ### Data Structure
 ```python
 # Compound object (associated with folder path)
 {
-  "objectid": "dg_1736712345",
+  "objectid": "dg_1736712345",  # [CB-SPECIFIC] CB identifier field
   "type": "compound",
   "text_base": "photo",
   "child_count": 3,
@@ -131,13 +132,14 @@ When `group_compound_objects` is enabled in Function 0:
 
 # Child objects (have files)
 {
-  "objectid": "dg_1736712346",
-  "parentid": "dg_1736712345",  # Points to compound
+  "objectid": "dg_1736712346",  # [CB-SPECIFIC]
+  "parentid": "dg_1736712345",  # Points to compound  # [CB-SPECIFIC]
   "type": "child",
   "filepath": "/Users/username/assets/photo_001.jpg",
   "filename": "photo_001.jpg"
 }
 ```
+<!-- [CB-SPECIFIC] END -->
 
 ### Compound ID Persistence
 Compound IDs are tracked using a key format: `{folder_path}::COMPOUND::{text_base}`
@@ -241,14 +243,14 @@ In this example:
 - 2 compound objects created ("photo" group in /assets, "scan" group in /documents)
 - Each compound shows its associated folder path
 - 1 standalone object (poster.pdf doesn't match any group)
-- Each compound has its own ID that serves as the parentid for its children
+- Each compound has its own ID that serves as the parentid for its children <!-- [CB-SPECIFIC] -->
 
 ## Notes
 - Only files with recognized digital asset extensions are analyzed
 - Object IDs are generated automatically and cannot be manually specified
-- When compound grouping is DISABLED, all files are standalone with no parentid
+- When compound grouping is DISABLED, all files are standalone with no parentid <!-- [CB-SPECIFIC] -->
 - When compound grouping is ENABLED, files are analyzed for text-based grouping
 - Compound objects are associated with the folder containing their children
 - Compound IDs persist: same folder + text base always produces same compound ID
-- Children track their parent via the `parentid` field
+- Children track their parent via the `parentid` field <!-- [CB-SPECIFIC] -->
 - Results are displayed in the dialog but not automatically saved (use other functions to export)

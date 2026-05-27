@@ -267,7 +267,7 @@ Function 4 implements the merge workflow recommended by the PDF guide:
 ## Integration with Other Functions
 
 - **Function 2** generates new CSV exports - compare these against your core file
-- **Function 3** updates image_small and image_thumb columns - track which derivatives were added
+- **Function 3** updates image_small and image_thumb columns - track which derivatives were added <!-- [CB-SPECIFIC] -->
 - **Function 1** creates object IDs - verify they match between exports
 - Use Function 4 to audit any CSV-based workflow changes
 

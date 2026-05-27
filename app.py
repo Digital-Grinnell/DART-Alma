@@ -2,6 +2,24 @@
 DART - Digital Asset Routing and Transformation
 A Flet desktop application for digital asset management with persistent settings,
 logging, function management, and help documentation based on OHM's proven UI.
+
+[CB-SPECIFIC] FLAGGING GUIDE
+=============================
+Lines and sections marked with "# [CB-SPECIFIC]" contain logic, field names, or
+behaviour that is specific to CollectionBuilder (CB) and will need to be replaced
+or re-mapped when targeting an Alma Digital / Specto ingest environment.
+
+Key CB concepts used in this file:
+  - objectid        : CB unique identifier field (Alma equivalent: MMS ID / local ID)
+  - display_template: CB layout/viewer type (image/video/audio/pdf/compound_object)
+  - parentid        : CB compound-object parent reference
+  - object_location : CB Azure Blob Storage URL for the master file
+  - image_small     : CB URL for 800x800 derivative image
+  - image_thumb     : CB URL for 400x400 thumbnail image
+  - compound_object : CB display_template value for multi-file parent records
+
+Search for "# [CB-SPECIFIC]" throughout this file to locate every point that
+needs to be adapted for the Alma Digital / Specto target environment.
 """
 
 import flet as ft
@@ -111,9 +129,11 @@ DEFAULT_APP_SETTINGS = {
     "file_to_id_map": {},  # Maps full file paths to assigned dg_<epoch> IDs
 }
 
-# Required CollectionBuilder CSV fields
-REQUIRED_CSV_FIELDS = ["objectid", "filename"]
-RECOMMENDED_CSV_FIELDS = ["title", "format", "date"]
+# [CB-SPECIFIC] Required CollectionBuilder CSV fields.
+# Alma Digital / Specto uses a different mandatory-field set.
+# Replace "objectid" with the Alma identifier field (e.g. "mms_id" or "local_id").
+REQUIRED_CSV_FIELDS = ["objectid", "filename"]  # [CB-SPECIFIC]
+RECOMMENDED_CSV_FIELDS = ["title", "format", "date"]  # [CB-SPECIFIC] adjust for Alma schema
 
 
 class PersistentStorage:
@@ -325,7 +345,7 @@ def load_help_document(filename: str) -> str:
 
 def validate_csv_structure(csv_path: str) -> Tuple[bool, str, list]:
     """
-    Validate that a CSV file has the required CollectionBuilder fields.
+    Validate that a CSV file has the required CollectionBuilder fields.  # [CB-SPECIFIC]
     Returns (success, message, field_list).
     """
     if not csv_path or not csv_path.strip():
@@ -510,7 +530,11 @@ def init_azure_client(connection_string: str) -> Tuple[bool, Optional[BlobServic
 
 def build_object_location(azure_path: str, object_id: str, file_extension: str, connection_string: str) -> Tuple[bool, str, str]:
     """
-    Build complete Azure Blob Storage URL for an object.
+    Build complete Azure Blob Storage URL for an object.  # [CB-SPECIFIC]
+    
+    This function generates the CollectionBuilder `object_location` URL.  # [CB-SPECIFIC]
+    For Alma Digital / Specto, replace this with the equivalent ingest URL builder
+    (e.g. an Alma Digital API endpoint or Specto repository path).
     
     Args:
         azure_path: Path like "objs/collection_name" or "container/objs/path"
@@ -520,7 +544,7 @@ def build_object_location(azure_path: str, object_id: str, file_extension: str, 
     
     Returns (success, url, message).
     
-    URL format: https://{account}.blob.core.windows.net/{container}/{path}/{objectid}{ext}
+    URL format: https://{account}.blob.core.windows.net/{container}/{path}/{objectid}{ext}  # [CB-SPECIFIC]
     """
     try:
         # Parse connection string to get account name
@@ -539,7 +563,7 @@ def build_object_location(azure_path: str, object_id: str, file_extension: str, 
         # Split path into container and blob path
         path_parts = normalized_path.split('/', 1)
         if len(path_parts) == 1:
-            # Just container name provided (e.g., "objs")
+            # Just container name provided (e.g., "objs")  # [CB-SPECIFIC] CB uses "objs" container convention
             container = path_parts[0]
             blob_path = ""
         else:
@@ -554,14 +578,14 @@ def build_object_location(azure_path: str, object_id: str, file_extension: str, 
             blob_name = f"{object_id}{file_extension}"
         
         # Build complete URL
-        url = f"https://{account_name}.blob.core.windows.net/{container}/{blob_name}"
+        url = f"https://{account_name}.blob.core.windows.net/{container}/{blob_name}"  # [CB-SPECIFIC]
         
         return True, url, f"Built URL for {object_id}{file_extension}"
         
     except Exception as e:
         sanitized_msg = sanitize_error_message(str(e), connection_string)
-        logger.error(f"Error building object_location for {object_id}: {sanitized_msg}")
-        return False, "", f"Error building object_location: {sanitized_msg}"
+        logger.error(f"Error building object_location for {object_id}: {sanitized_msg}")  # [CB-SPECIFIC] object_location field name
+        return False, "", f"Error building object_location: {sanitized_msg}"  # [CB-SPECIFIC]
 
 
 def upload_to_azure(
@@ -1584,7 +1608,7 @@ def main(page: ft.Page):
                 - reused_mappings: Count of existing compound IDs reused
                 
         Side effects:
-            Modifies objects in place, adding: parentid, type, sequence_number
+            Modifies objects in place, adding: parentid, type, sequence_number  # [CB-SPECIFIC] parentid is a CB field
         """
         compound_objects = []
         compound_new_mappings = 0
@@ -1594,7 +1618,7 @@ def main(page: ft.Page):
             # No compound grouping - all objects are standalone
             add_log_message(f"[DEBUG] Compound grouping DISABLED - all objects standalone")
             for obj in objects:
-                obj["parentid"] = None
+                obj["parentid"] = None  # [CB-SPECIFIC] CB compound parent reference
                 obj["type"] = "single"
             return compound_objects, file_to_id_map, compound_new_mappings, compound_reused_mappings
         
@@ -1846,7 +1870,7 @@ def main(page: ft.Page):
                     display_text_base = first_raw_stem
                 
                 compound_objects.append({
-                    "objectid": compound_id,
+                    "objectid": compound_id,            # [CB-SPECIFIC] CB identifier field
                     "text_base": text_base,  # Lowercase version for internal use
                     "display_text_base": display_text_base,  # Original case for display/titles
                     "child_count": len(group_files),
@@ -1856,19 +1880,19 @@ def main(page: ft.Page):
                     "first_child_filename": first_child_filename
                 })
                 
-                # Assign this compound ID as parentid to all children
+                # Assign this compound ID as parentid to all children  # [CB-SPECIFIC] parentid is CB-specific
                 # Also store sequence numbers from parsed data for display
                 # Use sorted_items to maintain consistent ordering
                 for parsed_item in sorted_items:
                     child_obj = parsed_item['obj']
-                    child_obj["parentid"] = compound_id
+                    child_obj["parentid"] = compound_id  # [CB-SPECIFIC] CB compound parent reference
                     child_obj["type"] = "child"
                     child_obj["sequence_number"] = parsed_item.get('number')  # Store for display
                 
                 logger.info(f"[DEBUG] Compound: {compound_id} | Base: '{text_base}' | Folder: {folder_path} | Children: {[f['filename'] for f in group_files]}")
             else:
                 # Single file - not part of a compound
-                group_files[0]["parentid"] = None
+                group_files[0]["parentid"] = None  # [CB-SPECIFIC] CB compound parent reference
                 group_files[0]["type"] = "single"
                 logger.info(f"[DEBUG] Single object (no compound): {group_files[0]['filename']}")
         
@@ -1974,7 +1998,7 @@ def main(page: ft.Page):
             
             # Store both full path and display name
             objects.append({
-                "objectid": unique_id,
+                "objectid": unique_id,  # [CB-SPECIFIC] CB identifier field
                 "filepath": file_path_str,  # Keep full current path for file access
                 "filename": Path(file_path_str).name,
             })
@@ -2004,9 +2028,9 @@ def main(page: ft.Page):
 
 
         # Validate uniqueness of object IDs (should always be unique with epoch-based IDs)
-        objectid_counts = {}
+        objectid_counts = {}  # [CB-SPECIFIC] validates CB objectid uniqueness
         for obj in objects:
-            oid = obj["objectid"]
+            oid = obj["objectid"]  # [CB-SPECIFIC]
             objectid_counts[oid] = objectid_counts.get(oid, 0) + 1
         
         duplicates = {oid: count for oid, count in objectid_counts.items() if count > 1}
@@ -2014,13 +2038,13 @@ def main(page: ft.Page):
             error_msg = f"ERROR: Duplicate object IDs found: {duplicates}"
             add_log_message(f"[DEBUG] {error_msg}")
             logger.error(f"[DEBUG] {error_msg}")
-            logger.error(f"[DEBUG] Objects with duplicates: {[obj for obj in objects if obj['objectid'] in duplicates]}")
+            logger.error(f"[DEBUG] Objects with duplicates: {[obj for obj in objects if obj['objectid'] in duplicates]}")  # [CB-SPECIFIC]
             update_status("Error: Duplicate object IDs detected -", is_error=True, log_clickable=True)
             
             # Show error dialog with details
             dup_details = []
             for oid in sorted(duplicates.keys()):
-                files_with_oid = [obj["filename"] for obj in objects if obj["objectid"] == oid]
+                files_with_oid = [obj["filename"] for obj in objects if obj["objectid"] == oid]  # [CB-SPECIFIC]
                 dup_details.append(f"• {oid} appears {duplicates[oid]} times:")
                 for fname in files_with_oid:
                     dup_details.append(f"    - {fname}")
@@ -2062,13 +2086,13 @@ def main(page: ft.Page):
         
         # Display logic based on compound grouping
         if group_compound and compound_objects:
-            # Group children by parentid for organized display
+            # Group children by parentid for organized display  # [CB-SPECIFIC]
             children_by_parent = {}
             standalone = []
             
             for obj in objects:
-                if obj.get("parentid"):
-                    parent_id = obj["parentid"]
+                if obj.get("parentid"):  # [CB-SPECIFIC] CB compound parent reference
+                    parent_id = obj["parentid"]  # [CB-SPECIFIC]
                     if parent_id not in children_by_parent:
                         children_by_parent[parent_id] = []
                     children_by_parent[parent_id].append(obj)
@@ -2079,12 +2103,12 @@ def main(page: ft.Page):
             for compound in compound_objects:
                 zero_pad = compound.get('zero_pad_width', 0)
                 display_name = compound.get('display_text_base', compound.get('text_base', ''))
-                result_lines.append(f"📦 COMPOUND: {compound['objectid']} ('{display_name}' - {compound['child_count']} children)")
+                result_lines.append(f"📦 COMPOUND: {compound['objectid']} ('{display_name}' - {compound['child_count']} children)")  # [CB-SPECIFIC]
                 result_lines.append(f"    Folder: {compound['folder_path']}")
                 
                 # Show children indented, sorted by sequence number
-                if compound['objectid'] in children_by_parent:
-                    children = children_by_parent[compound['objectid']]
+                if compound['objectid'] in children_by_parent:  # [CB-SPECIFIC]
+                    children = children_by_parent[compound['objectid']]  # [CB-SPECIFIC]
                     
                     # Sort: numbered files by sequence, then unnumbered alphabetically
                     numbered = [c for c in children if c.get('sequence_number') is not None]
@@ -2096,20 +2120,20 @@ def main(page: ft.Page):
                         seq_num = child.get('sequence_number')
                         if seq_num is not None and zero_pad > 0:
                             seq_display = f"[{str(seq_num).zfill(zero_pad)}]"
-                            result_lines.append(f"    ↳ {child['objectid']} {seq_display} → {child['filename']}")
+                            result_lines.append(f"    ↳ {child['objectid']} {seq_display} → {child['filename']}")  # [CB-SPECIFIC]
                         else:
-                            result_lines.append(f"    ↳ {child['objectid']} → {child['filename']}")
+                            result_lines.append(f"    ↳ {child['objectid']} → {child['filename']}")  # [CB-SPECIFIC]
                 result_lines.append("")  # Blank line between compounds
             
             # Display standalone objects
             if standalone:
                 result_lines.append("📄 STANDALONE OBJECTS:")
                 for obj in standalone:
-                    result_lines.append(f"• {obj['objectid']} → {obj['filename']}")
+                    result_lines.append(f"• {obj['objectid']} → {obj['filename']}")  # [CB-SPECIFIC]
         else:
             # No compound grouping - simple list
             for obj in objects:
-                result_lines.append(f"• {obj['objectid']} → {obj['filename']}")
+                result_lines.append(f"• {obj['objectid']} → {obj['filename']}")  # [CB-SPECIFIC]
 
         result_text = "\n".join(result_lines)
 
@@ -2139,41 +2163,45 @@ def main(page: ft.Page):
             update_status(f"Analyzed {len(files)} file(s), generated {len(objects)} unique object ID(s)")
             logger.info(f"Function 1: Analyzed {len(files)} files, generated {len(objects)} unique object IDs")
 
+    # [CB-SPECIFIC] START - get_display_template maps file types to CollectionBuilder display_template values.
+    # For Alma Digital / Specto, replace this function with a mapper that returns the
+    # appropriate Alma/Specto resource-type or representation-type values.
     def get_display_template(file_extension):
         """
-        Map file extension to CollectionBuilder display_template value.
+        Map file extension to CollectionBuilder display_template value.  # [CB-SPECIFIC]
         
         Args:
             file_extension: File extension (with or without leading dot)
             
         Returns:
-            str: CollectionBuilder display_template value (image, video, audio, pdf, record)
+            str: CollectionBuilder display_template value (image, video, audio, pdf, record)  # [CB-SPECIFIC]
         """
         ext = file_extension.lower().lstrip('.')
         
-        # Image formats → "image"
+        # Image formats → "image"  # [CB-SPECIFIC] CB display_template value
         if ext in ['jpg', 'jpeg', 'png', 'gif', 'tif', 'tiff', 'bmp', 'webp']:
-            return 'image'
+            return 'image'  # [CB-SPECIFIC]
         
-        # Video formats → "video"
+        # Video formats → "video"  # [CB-SPECIFIC] CB display_template value
         elif ext in ['mp4', 'mov', 'avi', 'mkv', 'wmv', 'flv', 'webm']:
-            return 'video'
+            return 'video'  # [CB-SPECIFIC]
         
-        # Audio formats → "audio"
+        # Audio formats → "audio"  # [CB-SPECIFIC] CB display_template value
         elif ext in ['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a', 'wma']:
-            return 'audio'
+            return 'audio'  # [CB-SPECIFIC]
         
-        # PDF → "pdf"
+        # PDF → "pdf"  # [CB-SPECIFIC] CB display_template value
         elif ext == 'pdf':
-            return 'pdf'
+            return 'pdf'  # [CB-SPECIFIC]
         
-        # Archives and other formats → "record"
+        # Archives and other formats → "record"  # [CB-SPECIFIC] CB display_template value
         elif ext in ['zip', 'tar', 'gz', '7z', 'rar', 'bz2']:
-            return 'record'
+            return 'record'  # [CB-SPECIFIC]
         
-        # Unknown → empty (will use CB default)
+        # Unknown → empty (will use CB default)  # [CB-SPECIFIC]
         else:
             return ''
+    # [CB-SPECIFIC] END - get_display_template
 
     def on_function_2_export_csv(e):
         """Function 2: Export analyzed assets to CSV using template structure."""
@@ -2293,12 +2321,12 @@ def main(page: ft.Page):
             
             file_path = Path(file_path_str)
             objects.append({
-                "objectid": unique_id,
+                "objectid": unique_id,             # [CB-SPECIFIC] CB identifier field name
                 "filepath": file_path_str,  # Keep full current path for file access
                 "filename": file_path.name,
-                "display_template": get_display_template(file_path.suffix),
+                "display_template": get_display_template(file_path.suffix),  # [CB-SPECIFIC] CB layout field
                 "format": file_path.suffix.lower().lstrip('.'),
-                "parentid": None,  # Will be set if compound grouping enabled
+                "parentid": None,  # [CB-SPECIFIC] CB compound-object parent reference; Will be set if compound grouping enabled
             })
         
         add_log_message(f"[DEBUG] IDs: {new_mappings} new, {reused_mappings} reused")
@@ -2348,11 +2376,11 @@ def main(page: ft.Page):
                         add_log_message("⚠️ Kill switch activated - Azure uploads stopped")
                         break
                     
-                    object_id = obj['objectid']
+                    object_id = obj['objectid']  # [CB-SPECIFIC] CB identifier field
                     file_path = obj['filepath']
                     file_extension = Path(file_path).suffix
                     
-                    # Build object_location URL
+                    # Build object_location URL  # [CB-SPECIFIC] object_location is a CB field
                     success, url, msg = build_object_location(
                         azure_path,
                         object_id,
@@ -2361,7 +2389,7 @@ def main(page: ft.Page):
                     )
                     
                     if success:
-                        obj['object_location'] = url
+                        obj['object_location'] = url  # [CB-SPECIFIC]
                         
                         # Check if file already exists in Azure before uploading
                         # Build blob name to check existence
@@ -2407,18 +2435,18 @@ def main(page: ft.Page):
                                 upload_fail_count += 1
                                 logger.error(f"Upload failed: {upload_msg}")
                                 add_log_message(f"[ERROR] {upload_msg}")
-                                # Still include object_location in CSV even if upload failed
+                                # Still include object_location in CSV even if upload failed  # [CB-SPECIFIC]
                     else:
-                        obj['object_location'] = ''
-                        logger.error(f"Failed to build object_location: {msg}")
+                        obj['object_location'] = ''  # [CB-SPECIFIC]
+                        logger.error(f"Failed to build object_location: {msg}")  # [CB-SPECIFIC]
                         add_log_message(f"[ERROR] {msg}")
                 
                 logger.info(f"Azure upload complete: {upload_success_count} uploaded, {upload_skip_count} skipped (already exist), {upload_fail_count} failed")
                 add_log_message(f"[INFO] Upload complete: {upload_success_count} uploaded, {upload_skip_count} skipped, {upload_fail_count} failed")
         else:
-            # Azure not enabled - set empty object_location for all objects
+            # Azure not enabled - set empty object_location for all objects  # [CB-SPECIFIC]
             for obj in objects:
-                obj['object_location'] = ''
+                obj['object_location'] = ''  # [CB-SPECIFIC]
 
         # Create CSV filename with timestamp
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -2436,24 +2464,26 @@ def main(page: ft.Page):
                     for compound in compound_objects:
                         row = {}
                         for col in template_columns:
-                            if col == 'objectid':
+                            # [CB-SPECIFIC] START - CB-specific column handling for compound parents
+                            if col == 'objectid':  # [CB-SPECIFIC] CB identifier field
                                 row[col] = compound.get('objectid', '')
                             elif col == 'filename':
                                 # Use first child's filename with underscore prefix for indexing
                                 # This maintains filename as source of truth for ALL objects
                                 first_child = compound.get('first_child_filename', '')
                                 row[col] = f"_{first_child}" if first_child else ''
-                            elif col == 'parentid':
+                            elif col == 'parentid':  # [CB-SPECIFIC] CB compound parent field
                                 # Compound objects have no parent
                                 row[col] = ''
-                            elif col == 'display_template':
+                            elif col == 'display_template':  # [CB-SPECIFIC] CB layout field
                                 # Set compound_object layout for parent
-                                row[col] = 'compound_object'
+                                row[col] = 'compound_object'  # [CB-SPECIFIC] CB compound_object template value
                             elif col == 'title':
                                 # Use display_text_base for title (preserves original case from filename)
                                 row[col] = compound.get('display_text_base', '').replace('_', ' ').replace('-', ' ')
                             else:
                                 row[col] = ''
+                            # [CB-SPECIFIC] END - CB-specific column handling for compound parents
                         
                         writer.writerow(row)
                 
@@ -2462,22 +2492,24 @@ def main(page: ft.Page):
                     # Build row with template columns
                     row = {}
                     for col in template_columns:
+                        # [CB-SPECIFIC] START - CB-specific column mapping for file objects
                         # Map known fields
-                        if col == 'objectid':
+                        if col == 'objectid':  # [CB-SPECIFIC] CB identifier field
                             row[col] = obj.get('objectid', '')
                         elif col == 'filename':
                             row[col] = obj.get('filename', '')
-                        elif col == 'parentid':
+                        elif col == 'parentid':  # [CB-SPECIFIC] CB compound parent reference
                             row[col] = obj.get('parentid', '')
-                        elif col == 'display_template':
+                        elif col == 'display_template':  # [CB-SPECIFIC] CB layout field
                             row[col] = obj.get('display_template', '')
                         elif col == 'format':
                             row[col] = obj.get('format', '')
-                        elif col == 'object_location':
+                        elif col == 'object_location':  # [CB-SPECIFIC] CB file URL field
                             row[col] = obj.get('object_location', '')
                         else:
                             # Leave other columns empty for manual population
                             row[col] = ''
+                        # [CB-SPECIFIC] END - CB-specific column mapping for file objects
                     
                     writer.writerow(row)
             
@@ -2516,26 +2548,26 @@ def main(page: ft.Page):
                 result_text += f"Azure uploads: DISABLED (configure in Function 0)\n"
             
             result_text += f"\nAuto-populated fields:\n"
-            result_text += f"• objectid (unique DG identifier)\n"
+            result_text += f"• objectid (unique DG identifier)\n"  # [CB-SPECIFIC] CB field name
             result_text += f"• filename (original filename)\n"
             
             # List fields actually in the template
-            populated_fields = ['objectid', 'filename']
-            if 'parentid' in template_columns:
-                result_text += f"• parentid (compound object parent ID)\n"
-                populated_fields.append('parentid')
-            if 'display_template' in template_columns:
-                result_text += f"• display_template (CB layout: image/video/audio/pdf/compound_object)\n"
-                populated_fields.append('display_template')
+            populated_fields = ['objectid', 'filename']  # [CB-SPECIFIC] CB required fields
+            if 'parentid' in template_columns:  # [CB-SPECIFIC] CB compound parent field
+                result_text += f"• parentid (compound object parent ID)\n"  # [CB-SPECIFIC]
+                populated_fields.append('parentid')  # [CB-SPECIFIC]
+            if 'display_template' in template_columns:  # [CB-SPECIFIC] CB layout field
+                result_text += f"• display_template (CB layout: image/video/audio/pdf/compound_object)\n"  # [CB-SPECIFIC]
+                populated_fields.append('display_template')  # [CB-SPECIFIC]
             if 'format' in template_columns:
                 result_text += f"• format (file extension)\n"
                 populated_fields.append('format')
-            if 'object_location' in template_columns:
+            if 'object_location' in template_columns:  # [CB-SPECIFIC] CB file URL field
                 if azure_enabled:
-                    result_text += f"• object_location (Azure Blob Storage URL)\n"
+                    result_text += f"• object_location (Azure Blob Storage URL)\n"  # [CB-SPECIFIC]
                 else:
-                    result_text += f"• object_location (empty - Azure not configured)\n"
-                populated_fields.append('object_location')
+                    result_text += f"• object_location (empty - Azure not configured)\n"  # [CB-SPECIFIC]
+                populated_fields.append('object_location')  # [CB-SPECIFIC]
             if 'title' in template_columns and group_compound and compound_objects:
                 result_text += f"• title (suggested title for compound objects)\n"
                 populated_fields.append('title')
@@ -2648,11 +2680,13 @@ def main(page: ft.Page):
             update_status(f"Error reading CSV: {ex}", is_error=True)
             return
         
-        # Add image_small and image_thumb columns if not present
-        if 'image_small' not in fieldnames:
-            fieldnames.append('image_small')
-        if 'image_thumb' not in fieldnames:
-            fieldnames.append('image_thumb')
+        # [CB-SPECIFIC] Add image_small and image_thumb columns if not present.
+        # These are CollectionBuilder derivative URL fields.
+        # For Alma Digital / Specto, replace with the equivalent derivative/representation fields.
+        if 'image_small' not in fieldnames:  # [CB-SPECIFIC]
+            fieldnames.append('image_small')  # [CB-SPECIFIC]
+        if 'image_thumb' not in fieldnames:  # [CB-SPECIFIC]
+            fieldnames.append('image_thumb')  # [CB-SPECIFIC]
         
         # Build base Azure paths for derivatives
         # Extract container and path from objs path
@@ -2743,9 +2777,9 @@ def main(page: ft.Page):
             # Skip rows without files (compound parents have underscore-prefixed filenames)
             filename = row.get('filename', '').strip()
             if not filename:
-                objectid = row.get('objectid', 'unknown')
+                objectid = row.get('objectid', 'unknown')  # [CB-SPECIFIC]
                 title = row.get('title', '')[:50] if row.get('title') else 'no title'
-                add_log_message(f"[SKIP #{idx+1}] No filename (objectid: {objectid}, title: {title}...)")
+                add_log_message(f"[SKIP #{idx+1}] No filename (objectid: {objectid}, title: {title}...)")  # [CB-SPECIFIC]
                 skipped_count += 1
                 continue
             
@@ -2761,7 +2795,7 @@ def main(page: ft.Page):
                 skipped_count += 1
                 continue
             
-            objectid = row.get('objectid', '')
+            objectid = row.get('objectid', '')  # [CB-SPECIFIC] CB identifier field
             if not objectid:
                 add_log_message(f"[ERROR #{idx+1}] No object ID for {filename}")
                 skipped_count += 1
@@ -2780,15 +2814,17 @@ def main(page: ft.Page):
             
             add_log_message(f"[{idx+1}/{total_rows}] Processing {filename} ({objectid})")
             
+            # [CB-SPECIFIC] Derivative filenames are based on the CB objectid.
+            # For Alma / Specto, replace objectid with the appropriate identifier field.
             # Check if derivatives already exist in Azure
-            small_filename = f"{objectid}_SMALL.jpg"
-            thumb_filename = f"{objectid}_TN.jpg"
+            small_filename = f"{objectid}_SMALL.jpg"  # [CB-SPECIFIC] CB derivative naming convention
+            thumb_filename = f"{objectid}_TN.jpg"     # [CB-SPECIFIC] CB thumbnail naming convention
             small_local_path = temp_dir / small_filename
             thumb_local_path = temp_dir / thumb_filename
             
             # Build blob names for checking existence
-            small_blob_name = f"{base_path}/{objectid}_SMALL.jpg" if base_path else f"{objectid}_SMALL.jpg"
-            thumb_blob_name = f"{base_path}/{objectid}_TN.jpg" if base_path else f"{objectid}_TN.jpg"
+            small_blob_name = f"{base_path}/{objectid}_SMALL.jpg" if base_path else f"{objectid}_SMALL.jpg"  # [CB-SPECIFIC]
+            thumb_blob_name = f"{base_path}/{objectid}_TN.jpg" if base_path else f"{objectid}_TN.jpg"        # [CB-SPECIFIC]
             
             try:
                 small_blob_client = blob_service_client.get_blob_client(container=smalls_container, blob=small_blob_name)
@@ -2807,21 +2843,21 @@ def main(page: ft.Page):
                 # Build URLs for existing derivatives
                 success_small_url, small_url, small_url_msg = build_object_location(
                     smalls_azure_path,
-                    objectid + "_SMALL",
+                    objectid + "_SMALL",  # [CB-SPECIFIC] CB derivative naming
                     ".jpg",
                     azure_connection_string
                 )
                 success_thumb_url, thumb_url, thumb_url_msg = build_object_location(
                     thumbs_azure_path,
-                    objectid + "_TN",
+                    objectid + "_TN",  # [CB-SPECIFIC] CB thumbnail naming
                     ".jpg",
                     azure_connection_string
                 )
                 if success_small_url:
-                    row['image_small'] = small_url
+                    row['image_small'] = small_url  # [CB-SPECIFIC] CB derivative URL field
                     small_success += 1
                 if success_thumb_url:
-                    row['image_thumb'] = thumb_url
+                    row['image_thumb'] = thumb_url  # [CB-SPECIFIC] CB thumbnail URL field
                     thumb_success += 1
                 skipped_count += 1
                 continue
@@ -2851,7 +2887,7 @@ def main(page: ft.Page):
                     blob_service_client,
                     str(small_local_path),
                     smalls_azure_path,
-                    objectid + "_SMALL",
+                    objectid + "_SMALL",  # [CB-SPECIFIC] CB derivative naming
                     ".jpg"
                 )
                 
@@ -2859,12 +2895,12 @@ def main(page: ft.Page):
                     # Build URL
                     success_url, url, url_msg = build_object_location(
                         smalls_azure_path,
-                        objectid + "_SMALL",
+                        objectid + "_SMALL",  # [CB-SPECIFIC]
                         ".jpg",
                         azure_connection_string
                     )
                     if success_url:
-                        row['image_small'] = url
+                        row['image_small'] = url  # [CB-SPECIFIC] CB derivative URL field
                         small_success += 1
                         add_log_message(f"  ✓ Small: {small_filename}")
                     else:
@@ -2897,7 +2933,7 @@ def main(page: ft.Page):
                     blob_service_client,
                     str(thumb_local_path),
                     thumbs_azure_path,
-                    objectid + "_TN",
+                    objectid + "_TN",  # [CB-SPECIFIC] CB thumbnail naming
                     ".jpg"
                 )
                 
@@ -2905,12 +2941,12 @@ def main(page: ft.Page):
                     # Build URL
                     success_url, url, url_msg = build_object_location(
                         thumbs_azure_path,
-                        objectid + "_TN",
+                        objectid + "_TN",  # [CB-SPECIFIC]
                         ".jpg",
                         azure_connection_string
                     )
                     if success_url:
-                        row['image_thumb'] = url
+                        row['image_thumb'] = url  # [CB-SPECIFIC] CB thumbnail URL field
                         thumb_success += 1
                         add_log_message(f"  ✓ Thumb: {thumb_filename}")
                     else:
@@ -2923,8 +2959,10 @@ def main(page: ft.Page):
                 thumb_fail += 1
                 add_log_message(f"  ✗ Thumb generation failed: {msg_thumb}")
         
-        # Populate derivatives for compound parents
-        # Compound parents use their first child's derivative URLs (based on filename without underscore)
+        # [CB-SPECIFIC] Populate derivatives for compound parents.
+        # Compound parents use their first child's derivative URLs (based on filename without underscore).
+        # This logic is CB-specific: the underscore-prefix convention and image_small/image_thumb fields
+        # must be replaced with the Alma Digital / Specto equivalent representation model.
         add_log_message(f"[INFO] Populating compound parent derivatives...")
         compound_derivatives_populated = 0
         
@@ -2943,25 +2981,25 @@ def main(page: ft.Page):
                 
                 if child_row:
                     # Copy derivative URLs from child to parent
-                    child_small = child_row.get('image_small', '').strip()
-                    child_thumb = child_row.get('image_thumb', '').strip()
+                    child_small = child_row.get('image_small', '').strip()   # [CB-SPECIFIC]
+                    child_thumb = child_row.get('image_thumb', '').strip()   # [CB-SPECIFIC]
                     
                     if child_small:
-                        row['image_small'] = child_small
+                        row['image_small'] = child_small  # [CB-SPECIFIC]
                     if child_thumb:
-                        row['image_thumb'] = child_thumb
+                        row['image_thumb'] = child_thumb  # [CB-SPECIFIC]
                     
                     if child_small and child_thumb:
                         compound_derivatives_populated += 1
-                        objectid = row.get('objectid', 'unknown')
+                        objectid = row.get('objectid', 'unknown')  # [CB-SPECIFIC]
                         title = row.get('title', '')[:30] if row.get('title') else 'no title'
                         add_log_message(f"  ✓ Compound parent {objectid} ({title}...) derivatives from {child_filename}")
                     elif child_small or child_thumb:
-                        add_log_message(f"  ⚠️ Compound parent {row.get('objectid', 'unknown')}: partial derivatives from {child_filename}")
+                        add_log_message(f"  ⚠️ Compound parent {row.get('objectid', 'unknown')}: partial derivatives from {child_filename}")  # [CB-SPECIFIC]
                     else:
-                        add_log_message(f"  ⚠️ Compound parent {row.get('objectid', 'unknown')}: no derivatives found for child {child_filename}")
+                        add_log_message(f"  ⚠️ Compound parent {row.get('objectid', 'unknown')}: no derivatives found for child {child_filename}")  # [CB-SPECIFIC]
                 else:
-                    add_log_message(f"  ⚠️ Compound parent {row.get('objectid', 'unknown')}: child file {child_filename} not found in CSV")
+                    add_log_message(f"  ⚠️ Compound parent {row.get('objectid', 'unknown')}: child file {child_filename} not found in CSV")  # [CB-SPECIFIC]
         
         if compound_derivatives_populated > 0:
             add_log_message(f"[SUCCESS] Populated derivatives for {compound_derivatives_populated} compound parent(s)")
@@ -3053,7 +3091,7 @@ def main(page: ft.Page):
                 ft.Text(f"Updated CSV: {output_csv.name}"),
                 ft.Text(f"Location: {working_dir}"),
                 ft.Text(""),
-                ft.Text(f"Columns added: image_small, image_thumb"),
+                ft.Text(f"Columns added: image_small, image_thumb"),  # [CB-SPECIFIC]
             ], scroll=ft.ScrollMode.AUTO, tight=True)
             
             dialog = ft.AlertDialog(
@@ -3183,24 +3221,26 @@ def main(page: ft.Page):
             changes_df = result['merged'][result['merged']['status'].isin(['changed', 'new', 'missing_in_new'])].copy()
             all_merged_df = result['merged']
             
-            # Build parent-child relationship map from the full dataset
-            parent_children_map = {}  # parentid -> [child rows]
-            parent_rows_map = {}  # parentid -> parent row
+            # [CB-SPECIFIC] Build parent-child relationship map using CB-specific field names.
+            # objectid, parentid are CB fields; underscore-prefix convention is CB-specific.
+            # For Alma Digital / Specto, replace these with the appropriate identifier fields.
+            parent_children_map = {}  # parentid -> [child rows]  # [CB-SPECIFIC]
+            parent_rows_map = {}  # parentid -> parent row  # [CB-SPECIFIC]
             
             for idx, row in all_merged_df.iterrows():
                 filename = row.get('filename', '')
                 if pd.notna(filename) and str(filename).strip().startswith('_'):
                     # This is a parent (underscore-prefixed filename)
-                    objectid_new = row.get('objectid_new', '')
-                    objectid_old = row.get('objectid_old', '')
+                    objectid_new = row.get('objectid_new', '')  # [CB-SPECIFIC]
+                    objectid_old = row.get('objectid_old', '')  # [CB-SPECIFIC]
                     parent_id = objectid_new if pd.notna(objectid_new) and str(objectid_new).strip() else objectid_old
                     if pd.notna(parent_id) and str(parent_id).strip():
                         parent_rows_map[str(parent_id).strip()] = row
             
             for idx, row in changes_df.iterrows():
                 # Check if this is a child with a parent
-                parentid_new = row.get('parentid_new', '')
-                parentid_old = row.get('parentid_old', '')
+                parentid_new = row.get('parentid_new', '')  # [CB-SPECIFIC]
+                parentid_old = row.get('parentid_old', '')  # [CB-SPECIFIC]
                 parent_id = parentid_new if pd.notna(parentid_new) and str(parentid_new).strip() else parentid_old
                 if pd.notna(parent_id) and str(parent_id).strip():
                     parent_id_str = str(parent_id).strip()
@@ -3238,7 +3278,7 @@ def main(page: ft.Page):
                             
                             # Show parent
                             parent_filename = parent_row.get('filename', '')
-                            parent_objectid = parent_row.get('objectid_new', parent_row.get('objectid_old', ''))
+                            parent_objectid = parent_row.get('objectid_new', parent_row.get('objectid_old', ''))  # [CB-SPECIFIC]
                             parent_status = parent_row.get('status', 'match')
                             parent_icon = {
                                 'new': '✨',
@@ -3271,7 +3311,7 @@ def main(page: ft.Page):
                                     
                                     identifier = child_row.get('filename', '')
                                     if pd.isna(identifier) or str(identifier).strip() == '':
-                                        identifier = child_row.get('objectid_old', child_row.get('objectid_new', f'Row {child_idx}'))
+                                        identifier = child_row.get('objectid_old', child_row.get('objectid_new', f'Row {child_idx}'))  # [CB-SPECIFIC]
                                     
                                     status = child_row['status']
                                     changed_fields = child_row['changed_fields']
@@ -3294,7 +3334,7 @@ def main(page: ft.Page):
                     
                     identifier = row.get('filename', '')
                     if pd.isna(identifier) or str(identifier).strip() == '':
-                        identifier = row.get('objectid_old', row.get('objectid_new', f'Row {idx}'))
+                        identifier = row.get('objectid_old', row.get('objectid_new', f'Row {idx}'))  # [CB-SPECIFIC]
                         if pd.isna(identifier) or str(identifier).strip() == '':
                             identifier = f'Row {idx}'
                     
@@ -3494,7 +3534,7 @@ Detailed results: {output_diff.name}
                                     
                                     for idx, record in enumerate(diff_result.get('added', [])):
                                         filename = record.get('filename', 'Unknown')
-                                        objectid = record.get('objectid', '')
+                                        objectid = record.get('objectid', '')  # [CB-SPECIFIC]
                                         title = record.get('title', '')
                                         
                                         record_text = f"{filename}"
@@ -3523,7 +3563,7 @@ Detailed results: {output_diff.name}
                                     
                                     for idx, record in enumerate(diff_result.get('removed', [])[:20]):  # Show first 20
                                         filename = record.get('filename', 'Unknown')
-                                        objectid = record.get('objectid', '')
+                                        objectid = record.get('objectid', '')  # [CB-SPECIFIC]
                                         title = record.get('title', '')
                                         
                                         record_text = f"• {filename}"
@@ -3560,7 +3600,7 @@ Detailed results: {output_diff.name}
                                         filename = record.get('filename', '')
                                         if filename and filename.startswith('_'):
                                             # This is a parent
-                                            parent_id = record.get('objectid', '')
+                                            parent_id = record.get('objectid', '')  # [CB-SPECIFIC]
                                             if parent_id:
                                                 parent_records[parent_id] = {'idx': idx, 'type': 'added', 'record': record}
                                     
@@ -3581,8 +3621,8 @@ Detailed results: {output_diff.name}
                                         key = change.get('key', ['Unknown'])[0]
                                         fields = change.get('fields', {})
                                         
-                                        # Check if has parentid field
-                                        parentid_change = fields.get('parentid', {})
+                                        # Check if has parentid field  # [CB-SPECIFIC] CB compound parent reference
+                                        parentid_change = fields.get('parentid', {})  # [CB-SPECIFIC]
                                         parent_id = parentid_change.get('to', parentid_change.get('from', ''))
                                         
                                         if parent_id and str(parent_id).strip():
@@ -3603,10 +3643,10 @@ Detailed results: {output_diff.name}
                                         fields = change.get('fields', {})
                                         
                                         # Check if this record has children
-                                        # For csvdiff, we need to extract objectid from the record
+                                        # For csvdiff, we need to extract objectid from the record  # [CB-SPECIFIC]
                                         record_objectid = None
-                                        if 'objectid' in fields:
-                                            record_objectid = fields['objectid'].get('to', fields['objectid'].get('from', ''))
+                                        if 'objectid' in fields:  # [CB-SPECIFIC] CB identifier field
+                                            record_objectid = fields['objectid'].get('to', fields['objectid'].get('from', ''))  # [CB-SPECIFIC]
                                         
                                         # Check if this is a parent with children
                                         is_compound_parent = record_objectid and record_objectid in parent_child_map
@@ -3906,7 +3946,7 @@ Detailed results: {output_diff.name}
                                         else:
                                             # Standalone record (not a compound parent with children)
                                             # Check if it's a child (will be handled with its parent)
-                                            parentid_change = fields.get('parentid', {})
+                                            parentid_change = fields.get('parentid', {})  # [CB-SPECIFIC] CB compound parent reference
                                             parent_id = parentid_change.get('to', parentid_change.get('from', ''))
                                             
                                             if parent_id and str(parent_id).strip():

@@ -7,7 +7,7 @@
 DART is focused on providing a valid import/ingest-compatible CSV metadata file using the digital objects and their original filenames as the "source of truth". Each object is given a unique Digital.Grinnell identifier and DART can help maintain those while directing files to proper long-term/preservation storage.
 
 **CSV Metadata Workflow:**
-- Define your metadata schema using a **CSV structure template** (with required CollectionBuilder fields)
+- Define your metadata schema using a **CSV structure template** (with required CollectionBuilder fields) <!-- [CB-SPECIFIC] -->
 - Designate a **core metadata CSV** as your master/controlling metadata file
 - Generate new metadata from asset batches using the template structure
 - Future functions will intelligently merge new metadata into the core CSV
@@ -30,7 +30,7 @@ DART provides a comprehensive platform for digital asset management workflows:
 - **Persistent File Selection**: Selected files are remembered across app restarts - no need to re-select
 - **Permanent ID Assignment**: Files receive unique `dg_<epoch>` identifiers that never change once assigned
 - **CSV Metadata Management**: Template-based CSV generation with intelligent merging into master metadata file
-- **CollectionBuilder Compatibility**: Validates CSV structure for required fields (objectid, filename)
+- **CollectionBuilder Compatibility**: Validates CSV structure for required fields (objectid, filename) <!-- [CB-SPECIFIC] -->
 - **Azure Blob Storage Integration**: Automatic file uploads with encrypted connection strings
 - **Kill Switch**: Emergency stop button for batch operations (stops cleanly without data corruption)
 - **Professional Logging**: Timestamped log files in `{working_folder}/logfiles/` with real-time display
@@ -51,21 +51,21 @@ DART provides a comprehensive platform for digital asset management workflows:
   - Creates compound objects for related file groups (optional)
   - Permanent ID assignment with folder-based compound tracking
 - **Function 2** 📊: Export Assets to CSV and Azure
-  - Generates CollectionBuilder-compatible metadata files
-  - Auto-populates objectid, filename, parentid, display_template, format, and object_location fields
-  - Supports compound object export with parent/child relationships
-  - Maps file types to CollectionBuilder layouts (image/video/audio/pdf/compound_object)
-  - **Azure Blob Storage integration**: Automatically uploads files and generates object_location URLs
+  - Generates CollectionBuilder-compatible metadata files <!-- [CB-SPECIFIC] -->
+  - Auto-populates objectid, filename, parentid, display_template, format, and object_location fields <!-- [CB-SPECIFIC] -->
+  - Supports compound object export with parent/child relationships <!-- [CB-SPECIFIC] -->
+  - Maps file types to CollectionBuilder layouts (image/video/audio/pdf/compound_object) <!-- [CB-SPECIFIC] -->
+  - **Azure Blob Storage integration**: Automatically uploads files and generates object_location URLs <!-- [CB-SPECIFIC] -->
   - **Auto-creates Azure containers**: No manual Azure Portal setup required
   - Files uploaded with DG identifiers as filenames (e.g., dg_1715614222.jpg)
   - **Kill Switch**: Emergency stop for long-running Azure uploads (stops cleanly after current file)
   - Timestamped exports to working directory
 - **Function 3** 🖼️: Generate Derivatives for CSV and Azure
   - Creates small (800x800) and thumbnail (400x400) image derivatives
-  - Uploads derivatives to Azure Blob Storage (/smalls/ and /thumbs/ folders)
-  - **Auto-creates derivative containers**: Automatic /smalls/ and /thumbs/ container setup
-  - **Smart skip existing**: Checks Azure and skips files with existing derivatives (fast re-runs)
-  - Automatically populates image_small and image_thumb CSV columns
+  - Uploads derivatives to Azure Blob Storage (/smalls/ and /thumbs/ folders) <!-- [CB-SPECIFIC] -->
+  - **Auto-creates derivative containers**: Automatic /smalls/ and /thumbs/ container setup <!-- [CB-SPECIFIC] -->
+  - **Smart skip existing**: Checks Azure and skips files with existing derivatives (fast re-runs) <!-- [CB-SPECIFIC] -->
+  - Automatically populates image_small and image_thumb CSV columns <!-- [CB-SPECIFIC] -->
   - Maintains aspect ratios, handles EXIF orientation and transparency
   - **Clickable log viewer**: Results dialog includes link to open detailed log in popup
   - **Kill Switch**: Emergency stop for long-running derivative generation
